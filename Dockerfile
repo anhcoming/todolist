@@ -1,34 +1,35 @@
 # ----------------------------------------------------------------------
-# Giai đoạn 1: BUILD - Biên dịch và đóng gói ứng dụng (Sử dụng image phát triển)
-# Base image: Maven với JDK 11
+# Giai đoạn 1: BUILD - Build ứng dụng bằng Maven + JDK 11
 # ----------------------------------------------------------------------
 FROM maven:3.9.5-jdk-11 AS build
-# Đặt thư mục làm việc bên trong container
+
 WORKDIR /app
 
-# Sao chép các file cấu hình và mã nguồn
+# Copy pom.xml trước để cache dependency
 COPY pom.xml .
-COPY src src
 
-# Chạy lệnh Maven để đóng gói ứng dụng thành file .jar
-# -DskipTests: Bỏ qua các bài kiểm tra để xây dựng nhanh hơn
+# Download toàn bộ dependencies trước để cache build nhanh hơn
+RUN mvn dependency:go-offline -B
+
+# Copy toàn bộ source
+COPY src ./src
+
+# Build ra JAR
 RUN mvn clean package -DskipTests
 
 
 # ----------------------------------------------------------------------
-# Giai đoạn 2: RUNTIME - Tạo image sản phẩm cuối cùng (Sử dụng image chỉ có JRE nhẹ)
-# Base image: JRE 11 nhẹ nhất
+# Giai đoạn 2: RUNTIME - Image chạy thật (JRE nhẹ)
 # ----------------------------------------------------------------------
 FROM eclipse-temurin:11-jre-jammy
 
-# Đặt thư mục làm việc
 WORKDIR /app
 
-# Sao chép file .jar đã build từ giai đoạn 'build'
+# Copy file JAR đã build
 COPY --from=build /app/target/*.jar app.jar
 
-# Khai báo cổng mặc định của Spring Boot
+# Mở cổng server
 EXPOSE 8080
 
-# Lệnh mặc định để chạy ứng dụng Spring Boot
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# ENTRYPOINT tối ưu cho container
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=80", "-jar", "app.jar"]
