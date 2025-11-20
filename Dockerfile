@@ -2,8 +2,7 @@
 # Giai đoạn 1: BUILD - Biên dịch và đóng gói ứng dụng (Sử dụng image phát triển)
 # Base image: Maven với JDK 11
 # ----------------------------------------------------------------------
-FROM maven:3.9.5-eclipse-temurin-11-jammy AS build
-
+FROM maven:3.9.5-jdk-11 AS build
 # Đặt thư mục làm việc bên trong container
 WORKDIR /app
 
